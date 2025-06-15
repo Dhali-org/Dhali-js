@@ -24,8 +24,7 @@ const seed = "sXXX"
 ;(async () => {
   const wallet = Wallet.fromSeed(seed)
   const manager = new DhaliChannelManager(wallet)
-  await manager.ready
-
+  
   let token
   try {
     token = await manager.getAuthToken()
