@@ -1,0 +1,26 @@
+{
+  "name": "dhali-js",
+  "version": "1.0.0",
+  "description": "A JavaScript library for managing XRPL payment channels and generating auth tokens for Dhali APIs",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "test": "jest",
+    "format": "prettier --write \"src/**/*.js\" \"tests/**/*.js\""
+  },
+  "keywords": [
+    "xrpl",
+    "payment-channel",
+    "dhali",
+    "xrpl.js"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "ripple-keypairs": "^2.0.0",
+    "xrpl": "^4.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0",
+    "prettier": "^3.5.3"
+  }
+}
