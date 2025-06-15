@@ -16,40 +16,43 @@ npm install dhali-js
 ## Quick Start
 
 ```js
-import { Wallet, Client } from 'xrpl'
-import {
-  ChannelNotFound,
-  DhaliChannelManager
-} from 'dhali-js'
+const { Wallet } = require('xrpl')
+const { DhaliChannelManager, ChannelNotFound } = require('dhali-js')
 
-// 1. Load your wallet from secret
-const seed = 'sXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-const wallet = Wallet.fromSeed(seed)
-
-// 2. Create the manager (connects automatically under the hood)
-const dhaliManager = new DhaliChannelManager(wallet)
-
-async function getPaymentClaim() {
-  try {
-    // Get an auth token
-    return await dhaliManager.getAuthToken()
-  } catch (err) {
-    if (err instanceof ChannelNotFound) {
-      // If no channel exists, create one with 1 XRP (1 000 000 drops)
-      await dhaliManager.deposit(1_000_000)
-      return await dhaliManager.getAuthToken()
-    }
-    throw err
-  }
-}
+const seed = "sXXX"
 
 ;(async () => {
-  for (let i = 0; i < 2; i++) {
-    const token = await getPaymentClaim()
-    const url = `https://xrplcluster.dhali.io?payment-claim=${token}`
-    // ... use token in your fetch/post to Dhali API ...
+  const wallet = Wallet.fromSeed(seed)
+  const manager = new DhaliChannelManager(wallet)
+  await manager.ready
+
+  let token
+  try {
+    token = await manager.getAuthToken()
+  } catch (err) {
+    if (err instanceof ChannelNotFound) {
+      await manager.deposit(1_000_000)
+      token = await manager.getAuthToken()
+    } else {
+      console.error(err)
+      process.exit(1)
+    }
   }
+
+  const url = `https://xrplcluster.dhali.io?payment-claim=${token}`
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      method: 'account_info',
+      params: [{ account: wallet.classicAddress, ledger_index: 'validated' }],
+      id: 1,
+    }),
+  })
+  const result = await resp.json()
+  console.log(result)
 })()
+
 ```
 
 ---
