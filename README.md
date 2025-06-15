@@ -1,3 +1,7 @@
+[![Package Tests](https://github.com/Dhali-org/Dhali-js/actions/workflows/tests.yaml/badge.svg)](https://github.com/Dhali-org/Dhali-js/actions/workflows/tests.yaml)
+[![Release](https://github.com/Dhali-org/Dhali-js/actions/workflows/publish.yaml/badge.svg)](https://github.com/Dhali-org/Dhali-js/actions/workflows/publish.yaml)
+
+
 # dhali-js
 
 A JavaScript library for managing XRPL payment channels and generating auth tokens for use with [Dhali](https://dhali.io) APIs.  
@@ -9,54 +13,76 @@ Leverages [xrpl.js](https://github.com/XRPLF/xrpl.js) and **only ever performs l
 
 ```bash
 npm install dhali-js
-````
+```
 
 ---
 
 ## Quick Start
 
 ```js
+// ==== 0. Common setup ====
 const { Wallet } = require('xrpl')
 const { DhaliChannelManager, ChannelNotFound } = require('dhali-js')
 
-const seed = "sXXX"
+const seed    = "sXXX"
+const wallet  = Wallet.fromSeed(seed)
+const manager = new DhaliChannelManager(wallet)
+```
 
-;(async () => {
-  const wallet = Wallet.fromSeed(seed)
-  const manager = new DhaliChannelManager(wallet)
-  
-  let token
-  try {
-    token = await manager.getAuthToken()
-  } catch (err) {
-    if (err instanceof ChannelNotFound) {
-      await manager.deposit(1_000_000)
-      token = await manager.getAuthToken()
-    } else {
-      console.error(err)
-      process.exit(1)
-    }
-  }
 
-  const url = `https://xrplcluster.dhali.io?payment-claim=${token}`
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      method: 'account_info',
-      params: [{ account: wallet.classicAddress, ledger_index: 'validated' }],
-      id: 1,
-    }),
-  })
-  const result = await resp.json()
-  console.log(result)
-})()
+### 1. Create a Payment Claim
 
+```js
+let token
+try {
+  token = await manager.getAuthToken()
+} catch (err) {
+  if (err instanceof ChannelNotFound) {
+    await manager.deposit(1_000_000)       // deposit 1 XRP
+    token = await manager.getAuthToken()   // 🔑 regenerate after deposit
+  } else throw err
+}
+console.log('New channel token:', token)
 ```
 
 ---
 
-## API
+### 2. Top Up Later (and Regenerate)
+
+```js
+await manager.deposit(2_000_000)            // add 2 XRP
+const updatedToken = await manager.getAuthToken()
+console.log('Updated token:', updatedToken)
+```
+
+---
+
+### 3. Using APIs and Handling 402 "Payment Required" Errors
+
+```js
+const fetchWithClaim = async (maxRetries = 5) => {
+  for (let i = 1; i <= maxRetries; i++) {
+    const token = await manager.getAuthToken()
+    const url   = `https://xrplcluster.dhali.io?payment-claim=${token}`
+    const resp  = await fetch(url, { /* …RPC call… */ })
+
+    if (resp.status !== 402) return resp.json()
+
+    console.warn(`Attempt ${i}: topping up…`)
+    await manager.deposit(1_000_000)         // deposit 1 XRP
+  }
+  throw new Error(`402 after ${maxRetries} retries`)
+}
+
+;(async () => {
+  const result = await fetchWithClaim()
+  console.log(result)
+})()
+```
+
+---
+
+## Class reference
 
 ### `new DhaliChannelManager(wallet: xrpl.Wallet)`
 
