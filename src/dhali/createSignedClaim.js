@@ -59,8 +59,42 @@ function buildPaychanAuthHexStringToBeSigned(channelIdHex, amountStr) {
   return msg.toString("hex").toUpperCase();
 }
 
+/**
+ * Get Typed Data structure for EIP-712 signing
+ */
+function getEthereumClaimTypedData(channelId, tokenAddress, maxAmount, chainId, contractAddress) {
+  const domain = {
+    name: "DhaliPaymentChannel",
+    version: "2.1.0",
+    chainId: chainId,
+    verifyingContract: contractAddress,
+  };
+
+  const types = {
+    DhaliClaim: [
+      { name: "channelId", type: "bytes32" },
+      { name: "token", type: "address" },
+      { name: "maxAmount", type: "uint256" },
+    ],
+  };
+
+  if (typeof channelId === "string" && !channelId.startsWith("0x")) {
+    channelId = "0x" + channelId;
+  }
+
+  const value = {
+    channelId: channelId,
+    token: tokenAddress,
+    maxAmount: maxAmount
+  };
+
+  return { domain, types, value };
+}
+
+
 module.exports = {
   buildPaychanAuthHexStringToBeSigned,
   // exposed for testing
   _serializePaychanAuthorization,
+  getEthereumClaimTypedData
 };

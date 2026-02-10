@@ -1,15 +1,14 @@
-const {
-  buildPaychanAuthHexStringToBeSigned,
-  _serializePaychanAuthorization,
-} = require("./dhali/createSignedClaim");
-const {
-  DhaliChannelManager,
-  ChannelNotFound,
-} = require("./dhali/DhaliChannelManager");
+const { DhaliChannelManager } = require("./dhali/DhaliChannelManager");
+const { DhaliXrplChannelManager, ChannelNotFound } = require("./dhali/DhaliXrplChannelManager");
+const { DhaliEthChannelManager } = require("./dhali/DhaliEthChannelManager");
+const { Currency } = require("./dhali/Currency");
+const { getAvailableDhaliCurrencies } = require("./dhali/configUtils");
 
 module.exports = {
-  buildPaychanAuthHexStringToBeSigned,
-  _serializePaychanAuthorization,
   DhaliChannelManager,
+  DhaliXrplChannelManager,
+  DhaliEthChannelManager,
   ChannelNotFound,
+  Currency,
+  getAvailableDhaliCurrencies
 };
