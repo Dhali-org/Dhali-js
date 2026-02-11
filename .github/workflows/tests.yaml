@@ -27,3 +27,6 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+      - name: Run lint
+        run: npx tsc src/dhali/*.js --allowJs --checkJs --noEmit --moduleResolution node --module commonjs --target esnext
