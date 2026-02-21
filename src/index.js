@@ -3,6 +3,7 @@ const { DhaliXrplChannelManager, ChannelNotFound } = require("./dhali/DhaliXrplC
 const { DhaliEthChannelManager } = require("./dhali/DhaliEthChannelManager");
 const { Currency } = require("./dhali/Currency");
 const { getAvailableDhaliCurrencies } = require("./dhali/configUtils");
+const { wrapAsX402PaymentPayload } = require("./dhali/utils");
 
 module.exports = {
   DhaliChannelManager,
@@ -10,5 +11,6 @@ module.exports = {
   DhaliEthChannelManager,
   ChannelNotFound,
   Currency,
-  getAvailableDhaliCurrencies
+  getAvailableDhaliCurrencies,
+  wrapAsX402PaymentPayload
 };
