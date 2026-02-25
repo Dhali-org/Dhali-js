@@ -104,6 +104,25 @@ const url = `https://xrplcluster.dhali.io?payment-claim=${token}`
 const response = await fetch(url, { method: 'POST', body: ... })
 ```
 
+## Standardized x402 Payments
+
+For APIs that follow the x402 standard, you may need to wrap your auth token with the payment requirement (retrieved from the `payment-required` header of a 402 response).
+
+```js
+const { wrapAsX402PaymentPayload } = require('dhali-js');
+
+// 1. Get your token as usual
+const token = await manager.getAuthToken();
+
+// 2. Get the payment requirement from the 'payment-required' header of a 402 response
+const paymentRequirement = response.headers.get("payment-required");
+
+// 3. Wrap into an x402 payload
+const x402Payload = wrapAsX402PaymentPayload(token, paymentRequirement);
+
+// 4. Use 'x402Payload' in the 'Payment' header
+```
+
 ---
 
 ## API Reference
