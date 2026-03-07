@@ -13,15 +13,13 @@ class DhaliXrplChannelManager {
   /**
    * @param {import("xrpl").Wallet} wallet
    * @param {import("xrpl").Client} rpc_client
-   * @param {string} protocol
    * @param {import("./Currency")} currency
    * @param {typeof fetch} [httpClient]
    * @param {object} [public_config]
    */
-  constructor(wallet, rpc_client, protocol, currency, httpClient = fetch, public_config) {
+  constructor(wallet, rpc_client, currency, httpClient = fetch, public_config) {
     this.wallet = wallet;
     this.rpc_client = rpc_client;
-    this.protocol = protocol;
     this.currency = currency;
     this.httpClient = httpClient || fetch;
     this.public_config = public_config;
@@ -38,7 +36,7 @@ class DhaliXrplChannelManager {
 
     if (!this.destination) {
       try {
-        this.destination = this.public_config.DHALI_PUBLIC_ADDRESSES[this.protocol][this.currency.code].wallet_id;
+        this.destination = this.public_config.DHALI_PUBLIC_ADDRESSES[this.currency.network][this.currency.code].wallet_id;
       } catch (e) {
         // Fallback to default if needed, or throw
         this.destination = "rJiAX3Xk2Fq3KJrjsGajrB5LENZq7VCwAd";
@@ -53,7 +51,7 @@ class DhaliXrplChannelManager {
    */
   async _retrieveChannelIdFromFirestore() {
     return await retrieveChannelIdFromFirestoreRest(
-      this.protocol,
+      this.currency.network,
       this.currency,
       this.wallet.address,
       this.httpClient
@@ -147,7 +145,7 @@ class DhaliXrplChannelManager {
               currencyIdentifier = `${this.currency.code}.${this.currency.tokenAddress}`;
             }
             await notifyAdminGateway(
-              this.protocol,
+              this.currency.network,
               currencyIdentifier,
               this.wallet.classicAddress,
               channelId,
@@ -185,7 +183,7 @@ class DhaliXrplChannelManager {
     const claim = {
       version: "2",
       account: this.wallet.classicAddress,
-      protocol: this.protocol,
+      protocol: this.currency.network,
       currency: { code: "XRP", scale: 6 },
       destination_account: this.destination,
       authorized_to_claim: allowed.toString(),

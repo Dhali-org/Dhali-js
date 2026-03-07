@@ -16,8 +16,8 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "ethers": "^6.0.0",
     "ripple-keypairs": "^2.0.0",
+    "viem": "^2.23.5",
     "xrpl": "^4.0.0"
   },
   "devDependencies": {

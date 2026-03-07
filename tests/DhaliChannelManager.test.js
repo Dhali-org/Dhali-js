@@ -53,11 +53,11 @@ describe("DhaliChannelManager", () => {
       submitAndWait: jest.fn(),
       autofill: jest.fn().mockResolvedValue({}),
     };
-    currency = new Currency("XRP", 6);
+    currency = new Currency("XRPL.MAINNET", "XRP", 6);
 
     const mockHttp = jest.fn();
     configUtils.retrieveChannelIdFromFirestoreRest.mockResolvedValue("CHAN123");
-    manager = new DhaliXrplChannelManager(wallet, mockClient, "XRPL.MAINNET", currency, mockHttp);
+    manager = new DhaliXrplChannelManager(wallet, mockClient, currency, mockHttp);
   });
 
   afterEach(() => {
@@ -82,7 +82,7 @@ describe("DhaliChannelManager", () => {
     test("throws ChannelNotFound if firestore returns null", async () => {
       const mockHttp = jest.fn();
       configUtils.retrieveChannelIdFromFirestoreRest.mockResolvedValue(null);
-      manager = new DhaliXrplChannelManager(wallet, mockClient, "XRPL.MAINNET", currency, mockHttp);
+      manager = new DhaliXrplChannelManager(wallet, mockClient, currency, mockHttp);
       await expect(manager.getAuthToken(100)).rejects.toThrow(ChannelNotFound);
       await expect(manager.getAuthToken(100)).rejects.toThrow(/No open payment channel from/);
       expect(configUtils.retrieveChannelIdFromFirestoreRest).toHaveBeenCalledWith(
