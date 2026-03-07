@@ -8,11 +8,8 @@ const Currency = require("./Currency");
 
 /**
  * Fetches and parses available Dhali currencies and configurations.
- * @returns {Promise<Object.<string, Object.<string, NetworkCurrencyConfig>>>}
- */
-/**
  * @param {typeof fetch} [httpClient]
- * @returns {Promise<Object>}
+ * @returns {Promise<Currency[]>}
  */
 async function getAvailableDhaliCurrencies(httpClient = fetch) {
     const url = "https://raw.githubusercontent.com/Dhali-org/Dhali-config/master/public.prod.json";
@@ -28,11 +25,10 @@ async function getAvailableDhaliCurrencies(httpClient = fetch) {
     }
 
     const publicAddresses = data.DHALI_PUBLIC_ADDRESSES || {};
-    /** @type {Object.<string, Object.<string, NetworkCurrencyConfig>>} */
-    const result = {};
+    /** @type {Currency[]} */
+    const result = [];
 
     for (const [network, currencies] of Object.entries(publicAddresses)) {
-        result[network] = {};
         for (const [code, details] of Object.entries(currencies)) {
             const tokenAddress = details.issuer || null;
             const scale = details.scale || 6;
@@ -40,12 +36,8 @@ async function getAvailableDhaliCurrencies(httpClient = fetch) {
 
             if (!destination) continue;
 
-            const curr = new Currency(code, scale, tokenAddress);
-
-            result[network][code] = {
-                currency: curr,
-                destinationAddress: destination
-            };
+            const curr = new Currency(network, code, scale, tokenAddress);
+            result.push(curr);
         }
     }
     return result;

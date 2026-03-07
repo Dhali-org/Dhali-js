@@ -5,30 +5,27 @@ const DhaliChannelManager = {
   /**
    * @param {import("xrpl").Wallet} wallet
    * @param {import("xrpl").Client} client
-   * @param {string} protocol
    * @param {import("./Currency")} currency
    * @param {typeof fetch} [httpClient] - Injected HTTP client
    * @param {object} [publicConfig]
    * @returns {DhaliXrplChannelManager}
    */
-  xrpl: (wallet, client, protocol, currency, httpClient, publicConfig) => {
-    return new DhaliXrplChannelManager(wallet, client, protocol, currency, httpClient, publicConfig);
+  xrpl: (wallet, client, currency, httpClient, publicConfig) => {
+    return new DhaliXrplChannelManager(wallet, client, currency, httpClient, publicConfig);
   },
 
   /**
-   * @param {import("ethers").Signer} signer
-   * @param {import("ethers").Provider} provider
-   * @param {string} protocol
+   * @param {import("viem").WalletClient} walletClient
+   * @param {import("viem").PublicClient} publicClient
    * @param {import("./Currency")} currency
    * @param {typeof fetch} [httpClient] - Injected HTTP client
    * @param {object} [publicConfig]
    * @returns {DhaliEthChannelManager}
    */
-  evm: (signer, provider, protocol, currency, httpClient, publicConfig) => {
+  evm: (walletClient, publicClient, currency, httpClient, publicConfig) => {
     return new DhaliEthChannelManager(
-      signer,
-      provider,
-      protocol,
+      walletClient,
+      publicClient,
       currency,
       httpClient,
       publicConfig

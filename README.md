@@ -16,6 +16,9 @@ Includes support for **Machine-to-Machine (M2M) payments** using seamless off-ch
 npm install dhali-js
 ```
 
+> [!TIP]
+> The examples below use CommonJS (`require`). Because they use `await`, the code is wrapped in an `async function main() { ... }` which is called immediately. To run these, simply save them to a `.js` file and run `node document.js`.
+
 ---
 
 ## Quick Start: Machine-to-Machine Payments
@@ -28,69 +31,85 @@ Uses `xrpl.js` for local signing.
 const { Client, Wallet } = require('xrpl')
 const { DhaliChannelManager, ChannelNotFound, Currency } = require('dhali-js')
 
-const seed    = "sXXX..."
-const wallet  = Wallet.fromSeed(seed)
-const client  = new Client("wss://s.altnet.rippletest.net:51233")
-await client.connect()
+async function main() {
+    const seed    = "sXXX..."
+    const wallet  = Wallet.fromSeed(seed)
+    const client  = new Client("wss://s.altnet.rippletest.net:51233")
+    await client.connect()
 
-const currency = new Currency("XRP", 6)
+    const currency = new Currency("XRPL.TESTNET", "XRP", 6)
 
-// Use Factory
-const manager = DhaliChannelManager.xrpl(wallet, client, "XRPL.TESTNET", currency)
+    // Use Factory
+    const manager = DhaliChannelManager.xrpl(wallet, client, currency)
 
-// Generate Claim
-let token;
-try {
-    token = await manager.getAuthToken();
-} catch (error) {
-    if (error.name === "ChannelNotFound") {
-       await manager.deposit(1000000); // Deposit 1 XRP
-       token = await manager.getAuthToken();
-    } else {
-       throw error;
+    // Generate Claim
+    let token;
+    try {
+        token = await manager.getAuthToken();
+    } catch (error) {
+        if (error.name === "ChannelNotFound") {
+           await manager.deposit(1000000); // Deposit 1 XRP
+           token = await manager.getAuthToken();
+        } else {
+           throw error;
+        }
     }
+    console.log('XRPL Token:', token);
 }
-console.log('XRPL Token:', token);
+
+main();
 ```
 
 ### 2. Ethereum (EVM)
 
-Uses `ethers` (v6) for EIP-712 signing.
+Uses `viem` for EIP-712 signing.
 
 ```js
-const { ethers } = require('ethers')
+const { createWalletClient, createPublicClient, http } = require('viem')
+const { privateKeyToAccount } = require('viem/accounts')
+const { mainnet, sepolia } = require('viem/chains')
 const { DhaliChannelManager, getAvailableDhaliCurrencies } = require('dhali-js')
 
-// 1. Setup Signer
-const provider = new ethers.JsonRpcProvider("https://rpc.ankr.com/eth_sepolia")
-const signer   = new ethers.Wallet("0x...", provider)
+async function main() {
+    // 1. Setup Clients
+    const account = privateKeyToAccount('0x...')
+    const publicClient = createPublicClient({
+      chain: sepolia,
+      transport: http()
+    })
+    const walletClient = createWalletClient({
+      account,
+      chain: sepolia,
+      transport: http()
+    })
 
-// 2. Fetch Available Currencies
-const configs = await getAvailableDhaliCurrencies()
-const sepoliaUsdc = configs["SEPOLIA"]["USDC"]
+    // 2. Fetch Available Currencies
+    const currencies = await getAvailableDhaliCurrencies()
+    const sepoliaUsdc = currencies.find(c => c.network === "SEPOLIA" && c.code === "USDC")
 
-// 3. Instantiate Manager with Dynamic Config
-const manager = DhaliChannelManager.evm(
-    signer,
-    provider,
-    "SEPOLIA",
-    sepoliaUsdc.currency
-)
+    // 3. Instantiate Manager with Dynamic Config
+    const manager = DhaliChannelManager.evm(
+        walletClient,
+        publicClient,
+        sepoliaUsdc
+    )
 
-// 4. Generate Claim
-// 4. Generate Claim
-let token;
-try {
-    token = await manager.getAuthToken(1000000); // 1.00 USDC
-} catch (error) {
-    if (error.name === "ChannelNotFound") {
-       await manager.deposit(1000000); // Deposit 1.00 USDC
-       token = await manager.getAuthToken(1000000);
-    } else {
-       throw error;
+    // 4. Generate Claim
+    let token;
+    try {
+        token = await manager.getAuthToken(1000000); // 1.00 USDC
+    } catch (error) {
+        if (error.name === "ChannelNotFound") {
+           await manager.deposit(1000000); // Deposit 1.00 USDC
+           token = await manager.getAuthToken(1000000);
+        } else {
+           throw error;
+        }
     }
+    console.log('EVM Token:', token);
 }
-console.log('EVM Token:', token);
+
+main();
 ```
 
 ---
@@ -111,38 +130,57 @@ For APIs that follow the x402 standard, you may need to wrap your auth token wit
 ```js
 const { wrapAsX402PaymentPayload } = require('dhali-js');
 
-// 1. Get your token as usual
-const token = await manager.getAuthToken();
+async function main() {
+    // 1. Get your token as usual
+    const token = await manager.getAuthToken();
 
-// 2. Get the payment requirement from the 'payment-required' header of a 402 response
-const paymentRequirement = response.headers.get("payment-required");
+    // 2. Get the payment requirement from the 'payment-required' header of a 402 response
+    const paymentRequirement = response.headers.get("payment-required");
 
-// 3. Wrap into an x402 payload
-const x402Payload = wrapAsX402PaymentPayload(token, paymentRequirement);
+    // 3. Wrap into an x402 payload
+    const x402Payload = wrapAsX402PaymentPayload(token, paymentRequirement);
 
-// 4. Use 'x402Payload' in the 'Payment' header
+    // 4. Use 'x402Payload' in the 'Payment' header
+}
+
+main();
 ```
 
 ---
 
 ## API Reference
 
-### `DhaliChannelManager`
+### `DhaliChannelManager` (Factory)
 
-* `.xrpl(wallet, client, protocol, currency)`: Returns `DhaliXrplChannelManager`.
-* `.evm(signer, provider, protocol, currency)`: Returns `DhaliEthChannelManager`.
+* `.xrpl(wallet, client, currency)`: Returns `DhaliXrplChannelManager`.
+* `.evm(walletClient, publicClient, currency)`: Returns `DhaliEthChannelManager`.
+
+### `DhaliEthChannelManager` & `DhaliXrplChannelManager`
+
+Both managers provide the following core methods:
+
+* `async deposit(amount)`: Deposits funds into a payment channel. For EVM/XRPL, `amount` is in base units (wei/drops, etc). If no channel exists, it creates one; if it exists, it funds it.
+* `async getAuthToken(amount = null)`: Generates a base64-encoded payment claim. If `amount` is provided, the claim is authorized up to that value. Defaults to total channel capacity if `amount` is `null`.
 
 ### `getAvailableDhaliCurrencies()`
 
-Returns a Promise resolving to:
+Returns a Promise resolving to an array of `Currency` objects:
 ```js
-{
-    "SEPOLIA": {
-        "USDC": { currency: ..., destinationAddress: ... },
-        ...
-    },
+[
+    { network: "SEPOLIA", code: "USDC", scale: 6, tokenAddress: "..." },
     ...
-}
+]
 ```
+
+---
+
+## Utilities
+
+### `wrapAsX402PaymentPayload(token, paymentRequirement)`
+
+Wraps an auth token and a payment requirement (retrieved from a 402 response header) into a base64-encoded x402-compliant payload.
+
+* **`token`**: The base64-encoded claim generated by `getAuthToken()`.
+* **`paymentRequirement`**: The base64-encoded requirement string from the `payment-required` header.
 
 ---
