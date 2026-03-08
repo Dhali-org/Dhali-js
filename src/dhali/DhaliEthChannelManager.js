@@ -49,7 +49,7 @@ class DhaliEthChannelManager {
 
     if (!this.destinationAddress) {
       try {
-        this.destinationAddress = this.public_config.DHALI_PUBLIC_ADDRESSES[this.currency.network][this.currency.code].wallet_id.toLowerCase();
+        this.destinationAddress = this.public_config.DHALI_PUBLIC_ADDRESSES[this.currency.network][this.currency.code].wallet_id;
       } catch (e) {
         throw new Error("Destination address not found in public_config for this protocol/currency: " + e.message);
       }
@@ -332,7 +332,7 @@ class DhaliEthChannelManager {
         scale: this.currency.scale,
         issuer: this.currency.tokenAddress || null
       },
-      destination_account: this.destinationAddress.toLowerCase(),
+      destination_account: this.destinationAddress,
       authorized_to_claim: allowed,
       channel_id: channelId,
       signature: signature

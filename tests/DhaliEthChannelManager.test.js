@@ -294,4 +294,32 @@ describe("DhaliEthChannelManager", () => {
             mockHttp
         );
     });
+
+    test("getAuthToken preserves destination_account casing", async () => {
+        const mixedCaseDestination = "0x71C7656EC7ab88b098defB751B7401B5f6d8976F";
+        const mixedCaseConfig = {
+            DHALI_PUBLIC_ADDRESSES: {
+                ETHEREUM: {
+                    ETH: { wallet_id: mixedCaseDestination }
+                }
+            },
+            CONTRACTS: {
+                ETHEREUM: { contract_address: "0x0000000000000000000000000000000000000003" }
+            }
+        };
+
+        const localManager = new DhaliEthChannelManager(mockWalletClient, mockPublicClient, currency, null, mixedCaseConfig);
+
+        // Mock required dependencies for getAuthToken
+        configUtils.retrieveChannelIdFromFirestoreRest.mockResolvedValue("0xChannelId");
+        const amountHex = BigInt(1000).toString(16).padStart(64, '0');
+        mockPublicClient.call = jest.fn().mockResolvedValue({ data: "0x" + "0".repeat(64 * 4) + amountHex });
+        mockWalletClient.signTypedData.mockResolvedValue("0xSignature");
+
+        const token = await localManager.getAuthToken(100);
+        const decoded = JSON.parse(Buffer.from(token, "base64").toString("utf8"));
+
+        expect(decoded.destination_account).toBe(mixedCaseDestination);
+        expect(decoded.destination_account).not.toBe(mixedCaseDestination.toLowerCase());
+    });
 });
