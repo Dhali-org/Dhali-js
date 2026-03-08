@@ -8,6 +8,7 @@ const {
 const crypto = require("crypto");
 
 const { fetchPublicConfig, notifyAdminGateway, retrieveChannelIdFromFirestoreRest } = require("./configUtils");
+const { ChannelNotFound } = require("./utils");
 
 class DhaliEthChannelManager {
   /**
@@ -29,11 +30,11 @@ class DhaliEthChannelManager {
   }
 
   _getChainIdFromProtocol(protocol) {
-    switch (protocol) {
+    switch (protocol.toUpperCase()) {
       case "ETHEREUM": return 1;
       case "SEPOLIA": return 11155111;
       case "HOLESKY": return 17000;
-      case "LOCALHOST": return 31337;
+      case "HARDHAT": return 31337;
       default: throw new Error(`Unsupported protocol: ${protocol}`);
     }
   }
@@ -48,7 +49,7 @@ class DhaliEthChannelManager {
 
     if (!this.destinationAddress) {
       try {
-        this.destinationAddress = this.public_config.DHALI_PUBLIC_ADDRESSES[this.currency.network][this.currency.code].wallet_id;
+        this.destinationAddress = this.public_config.DHALI_PUBLIC_ADDRESSES[this.currency.network][this.currency.code].wallet_id.toLowerCase();
       } catch (e) {
         throw new Error("Destination address not found in public_config for this protocol/currency: " + e.message);
       }
@@ -282,7 +283,7 @@ class DhaliEthChannelManager {
     // Poll Firestore if not found (setupBalanceListener simulation)
     const channelIdRaw = await this._retrieveChannelIdFromFirestoreWithPolling(10);
     if (!channelIdRaw) {
-      throw new Error("No open payment channel found in Firestore. Please deposit first.");
+      throw new ChannelNotFound("No open payment channel found in Firestore. Please deposit first.");
     }
 
     let channelId = channelIdRaw;
@@ -324,14 +325,14 @@ class DhaliEthChannelManager {
 
     const claim = {
       version: "2",
-      account: accountString,
+      account: accountString.toLowerCase(),
       protocol: this.currency.network,
       currency: {
         code: this.currency.code,
         scale: this.currency.scale,
         issuer: this.currency.tokenAddress || null
       },
-      destination_account: this.destinationAddress,
+      destination_account: this.destinationAddress.toLowerCase(),
       authorized_to_claim: allowed,
       channel_id: channelId,
       signature: signature

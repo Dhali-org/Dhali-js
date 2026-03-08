@@ -43,12 +43,13 @@ async function main() {
     const manager = DhaliChannelManager.xrpl(wallet, client, currency)
 
     // Generate Claim
+    const amount = Math.floor(1.0 * Math.pow(10, currency.scale)); // 1 XRP
     let token;
     try {
         token = await manager.getAuthToken();
     } catch (error) {
         if (error.name === "ChannelNotFound") {
-           await manager.deposit(1000000); // Deposit 1 XRP
+           await manager.deposit(amount);
            token = await manager.getAuthToken();
         } else {
            throw error;
@@ -95,13 +96,14 @@ async function main() {
     )
 
     // 4. Generate Claim
+    const amount = Math.floor(0.1 * Math.pow(10, sepoliaUsdc.scale)); // 0.10 USDC
     let token;
     try {
-        token = await manager.getAuthToken(1000000); // 1.00 USDC
+        token = await manager.getAuthToken(amount);
     } catch (error) {
         if (error.name === "ChannelNotFound") {
-           await manager.deposit(1000000); // Deposit 1.00 USDC
-           token = await manager.getAuthToken(1000000);
+           await manager.deposit(amount);
+           token = await manager.getAuthToken(amount);
         } else {
            throw error;
         }

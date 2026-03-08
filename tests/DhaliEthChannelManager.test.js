@@ -2,6 +2,7 @@ const { DhaliEthChannelManager } = require("../src/dhali/DhaliEthChannelManager"
 const Currency = require("../src/dhali/Currency");
 const { keccak256, encodeAbiParameters, parseAbiParameters } = require("viem");
 const configUtils = require("../src/dhali/configUtils");
+const { ChannelNotFound } = require("../src/dhali/utils");
 
 jest.mock("../src/dhali/configUtils");
 
@@ -138,7 +139,9 @@ describe("DhaliEthChannelManager", () => {
         const originalTimeout = global.setTimeout;
         global.setTimeout = (cb) => cb();
 
-        await expect(manager.getAuthToken(100)).rejects.toThrow(/No open payment channel found in Firestore/);
+        const promise = manager.getAuthToken(100);
+        await expect(promise).rejects.toThrow(ChannelNotFound);
+        await expect(promise).rejects.toThrow(/No open payment channel found in Firestore/);
 
         global.setTimeout = originalTimeout;
     });
@@ -253,6 +256,42 @@ describe("DhaliEthChannelManager", () => {
             currency,
             "0xmyaddr",
             fetch
+        );
+    });
+
+    test("performs lower-casing on EVM addresses consistently", async () => {
+        const mixedAddr = "0x71C7656EC7ab88b098defB751B7401B5f6d8976F";
+        const lowerAddr = mixedAddr.toLowerCase();
+
+        const mockHttp = jest.fn();
+        const manager = new DhaliEthChannelManager(mockWalletClient, mockPublicClient, currency, mockHttp, publicConfig);
+        mockWalletClient.getAddresses.mockResolvedValue([mixedAddr]);
+
+        // 1. Check firestore retrieval
+        configUtils.retrieveChannelIdFromFirestoreRest.mockResolvedValue("0xid");
+        await manager._retrieveChannelIdFromFirestore();
+        expect(configUtils.retrieveChannelIdFromFirestoreRest).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.anything(),
+            lowerAddr,
+            mockHttp
+        );
+
+        // 2. Check gateway notification during deposit (Open Channel path)
+        configUtils.retrieveChannelIdFromFirestoreRest.mockResolvedValue(null);
+        manager._generateNonce = jest.fn().mockReturnValue(1n);
+        manager._calculateChannelId = jest.fn().mockReturnValue("0xid");
+        mockWalletClient.sendTransaction.mockResolvedValue("0xhash");
+        mockPublicClient.waitForTransactionReceipt.mockResolvedValue({ status: "success" });
+        manager._retrieveChannelIdFromFirestoreWithPolling = jest.fn().mockResolvedValue("0xid");
+
+        await manager.deposit(100);
+        expect(configUtils.notifyAdminGateway).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.anything(),
+            lowerAddr,
+            expect.anything(),
+            mockHttp
         );
     });
 });

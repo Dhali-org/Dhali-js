@@ -39,6 +39,14 @@ function wrapAsX402PaymentPayload(claimBase64, paymentRequirementBase64) {
     return Buffer.from(JSON.stringify(x402Payload)).toString("base64");
 }
 
+class ChannelNotFound extends Error {
+    constructor(message = "No open payment channel found.") {
+        super(message);
+        this.name = "ChannelNotFound";
+    }
+}
+
 module.exports = {
     wrapAsX402PaymentPayload,
+    ChannelNotFound
 };
