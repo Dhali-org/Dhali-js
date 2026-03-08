@@ -147,4 +147,26 @@ describe("DhaliChannelManager", () => {
       );
     });
   });
+
+  describe("Casing", () => {
+    test("queries Firestore with original XRPL address casing", async () => {
+      const mockHttp = jest.fn();
+      wallet.address = "rMixedCaseAddress";
+      manager = new DhaliXrplChannelManager(
+        wallet,
+        mockClient,
+        currency,
+        mockHttp,
+      );
+
+      await manager._retrieveChannelIdFromFirestore();
+
+      expect(configUtils.retrieveChannelIdFromFirestoreRest).toHaveBeenCalledWith(
+        "XRPL.MAINNET",
+        currency,
+        "rMixedCaseAddress", // Should NOT be lower-cased
+        mockHttp,
+      );
+    });
+  });
 });

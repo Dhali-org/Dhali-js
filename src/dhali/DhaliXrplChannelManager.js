@@ -4,7 +4,7 @@ const { sign: signClaim } = require("ripple-keypairs");
 
 const { fetchPublicConfig, notifyAdminGateway, retrieveChannelIdFromFirestoreRest } = require("./configUtils");
 
-class ChannelNotFound extends Error { }
+const { ChannelNotFound } = require("./utils");
 
 /**
  * A management tool for generating payment claims for use with Dhali APIs (XRPL).
