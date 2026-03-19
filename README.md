@@ -148,6 +148,81 @@ async function main() {
 main();
 ```
 
+
+---
+
+## Asset Management (for Providers)
+
+If you have an API you want to monetize on Dhali, you can use the `DhaliAssetManager` to create and update your asset on the network.
+
+### 1. Create an Asset
+
+This generates an **Asset ID (UUID)**.
+
+#### XRPL Setup
+```js
+const { Wallet } = require('xrpl');
+const wallet = Wallet.fromSeed("s..."); // Your XRPL seed
+```
+
+#### EVM Setup
+```js
+const { createWalletClient, http } = require('viem');
+const { privateKeyToAccount } = require('viem/accounts');
+const { sepolia } = require('viem/chains');
+
+const walletClient = createWalletClient({
+    account: privateKeyToAccount("0x..."),
+    chain: sepolia,
+    transport: http()
+});
+```
+
+#### Initialization & Creation
+```js
+const { DhaliAssetManager, WalletDescriptor, Currency } = require('dhali-js');
+
+async function main() {
+    // For XRPL
+    const manager = DhaliAssetManager.xrpl(wallet);
+    const walletDescriptor = new WalletDescriptor(wallet.classicAddress, "XRPL.TESTNET");
+    
+    // OR For EVM
+    // const manager = DhaliAssetManager.evm(walletClient);
+    // const walletDescriptor = new WalletDescriptor(walletClient.account.address, "SEPOLIA");
+
+    const currency = new Currency("XRPL.TESTNET", "XRP", 6);
+
+    // Create the asset
+    const result = await manager.createAsset(walletDescriptor, currency);
+    console.log("Your new Asset ID:", result.uuid);
+}
+```
+
+Once created, your asset is represented by an **off-chain facilitator address**:  
+`https://x402.api.dhali.io/<uuid>`
+
+This facilitator is used for protocol-level concerns like verification and settlement, while your actual service requests are sent to your **Resource Server**.
+
+### 2. Update an Asset
+
+You can update your asset's metadata (name, rates, etc.) at any time.
+
+```js
+const { AssetUpdates } = require('dhali-js');
+
+async function main() {
+    const updates = new AssetUpdates({
+        name: "My Optimized AI API",
+        earning_rate: 100,            // 100 drops per request
+        earning_type: "per_request"   // or "per_second"
+    });
+
+    const result = await manager.updateAsset(assetId, walletDescriptor, updates);
+    console.log("Asset updated successfully");
+}
+```
+
 ---
 
 ## API Reference
