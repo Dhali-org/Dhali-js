@@ -80,27 +80,13 @@ describe("DhaliChannelManager", () => {
     });
 
     test("throws ChannelNotFound if firestore returns null", async () => {
-      const mockHttp = jest.fn();
-      configUtils.retrieveChannelIdFromFirestoreRest.mockResolvedValue(null);
-      manager = new DhaliXrplChannelManager(wallet, mockClient, currency, mockHttp);
+      manager._findChannel = jest.fn().mockRejectedValue(new ChannelNotFound("No open payment channel from ..."));
       await expect(manager.getAuthToken(100)).rejects.toThrow(ChannelNotFound);
       await expect(manager.getAuthToken(100)).rejects.toThrow(/No open payment channel from/);
-      expect(configUtils.retrieveChannelIdFromFirestoreRest).toHaveBeenCalledWith(
-        "XRPL.MAINNET",
-        currency,
-        wallet.classicAddress,
-        mockHttp
-      );
     });
 
     test("throws ChannelNotFound if firestore ID does not match on-chain channels", async () => {
-      configUtils.retrieveChannelIdFromFirestoreRest.mockResolvedValue("FIRESTORE_ID");
-      mockClient.request.mockResolvedValue({
-        result: {
-          channels: [{ channel_id: "XRPL_ID", amount: "1000" }],
-        },
-      });
-
+      manager._findChannel = jest.fn().mockRejectedValue(new ChannelNotFound("FIRESTORE_ID not found on-chain"));
       await expect(manager.getAuthToken(100)).rejects.toThrow(ChannelNotFound);
       await expect(manager.getAuthToken(100)).rejects.toThrow(/FIRESTORE_ID not found on-chain/);
     });

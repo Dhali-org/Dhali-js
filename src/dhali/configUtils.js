@@ -1,5 +1,7 @@
 const Currency = require("./Currency");
 
+let publicConfigCache = null;
+
 /**
  * @typedef {Object} NetworkCurrencyConfig
  * @property {Currency} currency
@@ -12,16 +14,21 @@ const Currency = require("./Currency");
  * @returns {Promise<Currency[]>}
  */
 async function getAvailableDhaliCurrencies(httpClient = fetch) {
-    const url = "https://raw.githubusercontent.com/Dhali-org/Dhali-config/master/public.prod.json";
     let data;
-    try {
-        const response = await httpClient(url);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+    if (publicConfigCache) {
+        data = publicConfigCache;
+    } else {
+        const url = "https://raw.githubusercontent.com/Dhali-org/Dhali-config/master/public.prod.json";
+        try {
+            const response = await httpClient(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            data = await response.json();
+            publicConfigCache = data;
+        } catch (e) {
+            throw new Error(`Failed to fetch Dhali configuration: ${e.message}`);
         }
-        data = await response.json();
-    } catch (e) {
-        throw new Error(`Failed to fetch Dhali configuration: ${e.message}`);
     }
 
     const publicAddresses = data.DHALI_PUBLIC_ADDRESSES || {};
@@ -48,13 +55,17 @@ async function getAvailableDhaliCurrencies(httpClient = fetch) {
  * @returns {Promise<Object>}
  */
 async function fetchPublicConfig(httpClient = fetch) {
+    if (publicConfigCache) {
+        return publicConfigCache;
+    }
     const url = "https://raw.githubusercontent.com/Dhali-org/Dhali-config/master/public.prod.json";
     try {
         const response = await httpClient(url);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        return await response.json();
+        publicConfigCache = await response.json();
+        return publicConfigCache;
     } catch (e) {
         throw new Error(`Failed to fetch Dhali configuration: ${e.message}`);
     }
@@ -68,6 +79,17 @@ async function fetchPublicConfig(httpClient = fetch) {
  * @param {string} channelId 
  * @param {typeof fetch} [httpClient]
  */
+/**
+ * @param {string} protocol
+ * @returns {boolean}
+ */
+function isEvmProtocol(protocol) {
+    return ["ETHEREUM", "SEPOLIA", "HOLESKY", "HARDHAT"].includes(protocol.toUpperCase());
+}
+
+/**
+ * Proactively notifies the Dhali Admin Gateway about a new payment channel.
+ */
 async function notifyAdminGateway(protocol, currencyIdentifier, accountAddress, channelId, httpClient = fetch) {
     const config = await fetchPublicConfig(httpClient);
     const rootUrl = config.ROOT_API_ADMIN_URL;
@@ -76,26 +98,39 @@ async function notifyAdminGateway(protocol, currencyIdentifier, accountAddress, 
     const httpRootUrl = rootUrl.replace("wss://", "https://").replace("ws://", "http://");
     const url = `${httpRootUrl}/public_claim_info/${protocol}/${currencyIdentifier}`;
 
-    if (!channelId.startsWith("0x")) {
-        channelId = "0x" + channelId;
-    }
-
     const payload = {
-        account: accountAddress,
-        channel_id: channelId
+        account: isEvmProtocol(protocol) ? accountAddress.toLowerCase() : accountAddress,
+        channel_id: (isEvmProtocol(protocol) && !channelId.startsWith("0x")) ? "0x" + channelId : channelId
     };
 
-    try {
-        await httpClient(url, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(payload)
-        });
-    } catch (e) {
-        // Best effort notification
+    let retryCount = 0;
+    const maxRetries = 10;
+    let delay = 1000;
+
+    while (retryCount <= maxRetries) {
+        try {
+            const response = await httpClient(url, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+            if (response.ok) {
+                return;
+            }
+            console.log(`Attempt ${retryCount + 1} failed to notify public claim info: ${response.status} ${response.statusText}`);
+        } catch (e) {
+            console.log(`Attempt ${retryCount + 1} error notifying public claim info:`, e);
+        }
+
+        if (retryCount < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, delay));
+            delay *= 2;
+        }
+        retryCount++;
     }
+    console.log(`Failed to notify public claim info after ${maxRetries} retries.`);
 }
 
 

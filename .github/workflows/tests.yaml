@@ -29,6 +29,9 @@ jobs:
         run: npm test tests/DhaliChannelManager.test.js tests/DhaliEthChannelManager.test.js tests/createSignedClaim.test.js tests/utils.test.js
 
       - name: Run integration tests
+        env:
+          XRPL_TESTNET_SECRET: ${{ secrets.XRPL_TESTNET_SECRET }}
+          SEPOLIA_TESTNET_SECRET: ${{ secrets.SEPOLIA_TESTNET_SECRET }}
         run: npm test tests/integration.test.js
 
       - name: Run lint
