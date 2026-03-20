@@ -95,7 +95,6 @@ class DhaliEthChannelManager {
   }
 
   async _calculateChannelId(receiver, tokenAddress, nonce) {
-    // Matches Dhali-wallet: keccak256(abi.encode(sender, receiver, token, nonce))
     const [sender] = await this.walletClient.getAddresses();
     return keccak256(
       encodeAbiParameters(

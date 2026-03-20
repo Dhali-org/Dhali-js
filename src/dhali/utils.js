@@ -16,8 +16,7 @@ function wrapAsX402PaymentPayload(claimBase64, paymentRequirementBase64) {
     if (req.accepts) {
         req = Array.isArray(req.accepts) ? req.accepts[0] : req.accepts;
     }
-
-    // Normalize fields to match Dhali-wallet's PaymentRequirements defaults (camelCase)
+    
     const normalizedReq = {
         scheme: req.scheme || "",
         network: req.network || "",

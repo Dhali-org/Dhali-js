@@ -58,12 +58,27 @@ class DhaliXrplChannelManager {
     );
   }
 
-  async _findChannel() {
+  async _retrieveChannelIdFromFirestoreWithPolling(timeoutSeconds = 30) {
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeoutSeconds * 1000) {
+      const channelId = await this._retrieveChannelIdFromFirestore();
+      if (channelId) return channelId;
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    return null;
+  }
+
+  async _findChannel(timeoutSeconds = 0) {
     await this.ready;
     await this._resolveAddresses();
 
     // Prioritize Firestore
-    const firestoreChannelId = await this._retrieveChannelIdFromFirestore();
+    let firestoreChannelId;
+    if (timeoutSeconds > 0) {
+      firestoreChannelId = await this._retrieveChannelIdFromFirestoreWithPolling(timeoutSeconds);
+    } else {
+      firestoreChannelId = await this._retrieveChannelIdFromFirestore();
+    }
 
     if (firestoreChannelId === null) {
       throw new ChannelNotFound(
@@ -100,7 +115,7 @@ class DhaliXrplChannelManager {
     await this.ready;
     let tx;
     try {
-      const ch = await this._findChannel();
+      const ch = await this._findChannel(0);
       tx = {
         TransactionType: "PaymentChannelFund",
         Account: this.wallet.classicAddress,
@@ -129,11 +144,9 @@ class DhaliXrplChannelManager {
     const result = await this.rpc_client.submitAndWait(txBlob);
 
     // If we just created a channel, notify the gateway
-    if (tx.TransactionType === "PaymentChannelCreate" &&
+    if (tx.TransactionType === "PaymentChannelCreate") {
       // @ts-ignore
-      (result.result.meta || result.result.metaData)) {
-      // @ts-ignore
-      const meta = result.result.meta || result.result.metaData;
+      const meta = result.result.meta || result.result.metaData || {};
       const affectedNodes = meta.AffectedNodes || [];
       for (const node of affectedNodes) {
         const createdNode = node.CreatedNode;
@@ -155,6 +168,8 @@ class DhaliXrplChannelManager {
           break;
         }
       }
+      // Poll Firestore to match DhaliEthChannelManager behavior
+      await this._retrieveChannelIdFromFirestoreWithPolling(30);
     }
 
     return result.result;
@@ -167,7 +182,7 @@ class DhaliXrplChannelManager {
    */
   async getAuthToken(amountDrops) {
     await this.ready;
-    const ch = await this._findChannel();
+    const ch = await this._findChannel(10);
     const total = BigInt(ch.amount);
     const allowed = amountDrops != null ? BigInt(amountDrops) : total;
     if (allowed > total) {
