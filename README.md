@@ -220,6 +220,59 @@ async function main() {
 
     const result = await manager.updateAsset(assetId, walletDescriptor, updates);
     console.log("Asset updated successfully");
+
+### 3. Closing a Channel
+
+To close a channel and settle final balances, use the **Admin Gateway WebSocket**. This process involves a challenge-response signature to verify ownership.
+
+```js
+const WebSocket = require('ws');
+const rippleKeypairs = require('ripple-keypairs'); // For XRPL
+
+async function closeChannel() {
+    const wsUrl = "wss://api.admin.gateway/ws/close-channel"; // or from public config
+    const ws = new WebSocket(wsUrl);
+
+    ws.on('open', () => {
+        // 1. Send Closure Request
+        ws.send(JSON.stringify({
+            schema: "api_admin_gateway_closure_request",
+            schema_version: "1.0",
+            wallet: {
+                type: "Dhali-js",
+                address: wallet.classicAddress,
+                protocol: "XRPL.TESTNET",
+                publicKey: wallet.publicKey,
+                currency: { code: "XRP", scale: 6, issuer: null }
+            },
+            protocol: "XRPL.TESTNET",
+            currency: "XRP"
+        }));
+    });
+
+    ws.on('message', (data) => {
+        const msg = JSON.parse(data);
+
+        // 2. Handle Signature Challenge
+        if (msg.schema === "api_admin_gateway_message_to_be_signed") {
+            const signature = rippleKeypairs.sign(
+                Buffer.from(JSON.stringify(msg.message, null, 0), 'utf8').toString('hex'), 
+                wallet.privateKey
+            );
+
+            ws.send(JSON.stringify({
+                schema: "api_admin_gateway_signed_message_response",
+                schema_version: "1.1",
+                signature: signature,
+                public_key: wallet.publicKey
+            }));
+        } else if (msg.success) {
+            console.log('Channel closure initiated:', msg.message);
+            ws.close();
+        }
+    });
+}
+```
 }
 ```
 
