@@ -32,8 +32,7 @@ describe('Dhali-js Comprehensive Integration Tests', () => {
 
     test('should perform comprehensive XRPL integration', async () => {
         if (!XRPL_SECRET) {
-            console.warn('XRPL_TESTNET_SECRET not set, skipping test');
-            return;
+            throw new Error('XRPL_TESTNET_SECRET not set. Integration tests cannot run without it.');
         }
 
         // 1. Setup Wallet and Asset Manager
@@ -79,7 +78,7 @@ describe('Dhali-js Comprehensive Integration Tests', () => {
         // 6. Settle via Facilitator using the newly created asset
         console.log(`Settling via facilitator using asset ${assetUuid}...`);
         const facilitatorUrl = getFacilitatorUrl(publicConfig);
-        const settleUrl = `${facilitatorUrl}/v2/${assetUuid}/settle`;
+        const settleUrl = `${facilitatorUrl}/v2/settle`;
 
         // Use the wrap function as suggested by the user
         const requirements = {
@@ -179,8 +178,7 @@ describe('Dhali-js Comprehensive Integration Tests', () => {
 
     test('should perform comprehensive EVM integration', async () => {
         if (!SEPOLIA_SECRET) {
-            console.warn('SEPOLIA_TESTNET_SECRET not set, skipping test');
-            return;
+            throw new Error('SEPOLIA_TESTNET_SECRET not set. Integration tests cannot run without it.');
         }
 
         // 1. Setup Wallet and Asset Manager
@@ -212,14 +210,18 @@ describe('Dhali-js Comprehensive Integration Tests', () => {
         console.log("EVM Asset updated successfully");
 
         // 4. Create Channel (Deposit)
+        // Using the same explicit RPC as Dhali-py for consistency (more reliable than rpc.sepolia.org)
+        const rpcUrl = "https://ethereum-sepolia.publicnode.com";
+        const transport = http(rpcUrl);
+
         const walletClient = createWalletClient({
             account,
             chain: sepolia,
-            transport: http()
+            transport: transport
         });
         const publicClient = createPublicClient({
             chain: sepolia,
-            transport: http()
+            transport: transport
         });
         const channelManager = DhaliChannelManager.evm(walletClient, publicClient, currency);
         console.log("Performing EVM deposit...");
@@ -237,7 +239,7 @@ describe('Dhali-js Comprehensive Integration Tests', () => {
         // 6. Settle via Facilitator using the newly created asset
         console.log(`Settling via facilitator using asset ${assetUuid}...`);
         const facilitatorUrl = getFacilitatorUrl(publicConfig);
-        const settleUrl = `${facilitatorUrl}/v2/${assetUuid}/settle`;
+        const settleUrl = `${facilitatorUrl}/v2/settle`;
 
         // Use the wrap function as suggested by the user
         const requirements = {
