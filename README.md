@@ -153,7 +153,7 @@ main();
 
 ## Asset Management (for Providers)
 
-If you have an API you want to monetize on Dhali, you can use the `DhaliAssetManager` to create and update your asset on the network.
+If you have an API you want to monetize on Dhali, you can use the `DhaliAssetManager` to receive off-chain payments.
 
 ### 1. Create an Asset
 
@@ -199,10 +199,9 @@ async function main() {
 }
 ```
 
-Once created, your asset is represented by an **off-chain facilitator address**:  
-`https://x402.api.dhali.io/<uuid>`
+Once created, youcan receive off-chain x402 payments using the facilitator:
+`https://x402.api.dhali.io`
 
-This facilitator is used for protocol-level concerns like verification and settlement, while your actual service requests are sent to your **Resource Server**.
 
 ### 2. Update an Asset
 
